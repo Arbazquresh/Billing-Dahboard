@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Tabs,
@@ -7,121 +7,26 @@ import {
   Modal,
   Typography,
   TextField,
-  CardContent,
-  Card,
 } from "@mui/material";
 import { Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { Select, MenuItem, FormControl, InputLabel } from "@mui/material";
-
-// Add Product Modal Component
-const AddProductModal = ({ open, onClose }) => (
-  <Modal
-    open={open}
-    onClose={onClose}
-    aria-labelledby="add-product-modal"
-    aria-describedby="add-product-description"
-    sx={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <Box
-      sx={{
-        width: "80%",
-        maxWidth: 600,
-        bgcolor: "background.paper",
-        borderRadius: 2,
-        boxShadow: 24,
-        p: 4,
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <Typography variant="h6" component="h2">
-        Add New Product
-      </Typography>
-      <TextField label="Product Name" fullWidth sx={{ mb: 2 }} />
-      <FormControl fullWidth>
-        <InputLabel id="select-label">Select Medicine</InputLabel>
-        <Select labelId="select-label" label="Select Medicine" defaultValue="">
-          <MenuItem value="">
-            <em>None</em>
-          </MenuItem>
-          <MenuItem value={10}>Paracetamol</MenuItem>
-          <MenuItem value={20}>Dolo 650</MenuItem>
-          <MenuItem value={30}>Crosin</MenuItem>
-        </Select>
-      </FormControl>
-      <br /> <br />
-      <TextField label="Price" type="number" fullWidth sx={{ mb: 2 }} />
-      <TextField
-        label="Description"
-        multiline
-        rows={4}
-        fullWidth
-        sx={{ mb: 2 }}
-      />
-      <Button variant="contained" color="primary" sx={{ mr: 2 }}>
-        Add Product
-      </Button>
-      <Button variant="outlined" color="secondary" onClick={onClose}>
-        Cancel
-      </Button>
-    </Box>
-  </Modal>
-);
-
-// Add Category Modal Component
-const AddCategoryModal = ({ open, onClose }) => (
-  <Modal
-    open={open}
-    onClose={onClose}
-    aria-labelledby="add-category-modal"
-    aria-describedby="add-category-description"
-    sx={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <Box
-      sx={{
-        width: "80%",
-        maxWidth: 600,
-        bgcolor: "background.paper",
-        borderRadius: 2,
-        boxShadow: 24,
-        p: 4,
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <Typography variant="h6" component="h2">
-        Add New Category
-      </Typography>
-      <TextField label="Category Name" fullWidth sx={{ mb: 2 }} />
-      <TextField
-        label="Description"
-        multiline
-        rows={4}
-        fullWidth
-        sx={{ mb: 2 }}
-      />
-      <Button variant="contained" color="primary" sx={{ mr: 2 }}>
-        Add Category
-      </Button>
-      <Button variant="outlined" color="secondary" onClick={onClose}>
-        Cancel
-      </Button>
-    </Box>
-  </Modal>
-);
+import axios from "axios";
+import { styled } from "@mui/material/styles";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 export const Nav = () => {
   const navigate = useNavigate();
   const [value, setValue] = useState(0);
   const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openAddCategory, setOpenAddCategory] = useState(false);
+  const [data, setData] = useState([]);
+
+  const [selectedCategory, setSelectedCategory] = useState(""); //2
+  const [selectedFile, setSelectedFile] = useState(null); //5
+  const [fileName, setFileName] = useState(""); //4
+  const [productName, setProductName] = useState(""); //1
+  const [price, setPrice] = useState(""); //3
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -131,9 +36,170 @@ export const Nav = () => {
     navigate("/setting");
   };
 
+  const handleCat = () => {
+    navigate("/cat");
+  };
+
   const handleLogout = () => {
     navigate("/");
   };
+
+  const getData = async () => {
+    const result = await axios.get(
+      "http://localhost:8090/api/category/getAllCategory"
+    );
+    setData(result.data);
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
+  const VisuallyHiddenInput = styled("input")({
+    clip: "rect(0 0 0 0)",
+    clipPath: "inset(50%)",
+    height: 1,
+    overflow: "hidden",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    whiteSpace: "nowrap",
+    width: 1,
+  });
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    setSelectedFile(file);
+    setFileName(file ? file.name : "");
+  };
+
+  const handleAddProduct = async () => {
+    if (!selectedFile) {
+      alert("Please select a file first.");
+      return;
+    }
+
+    const product = {
+      productName: productName,// productName,price will same of getter of usestate
+      productPrice: price,
+    };
+
+    const formData = new FormData();
+    formData.append("product", JSON.stringify(product)); // product & file name should be same in backend and database
+    formData.append("file", selectedFile); // Include the selected file
+
+    try {
+      const response = await axios.post(
+        `http://localhost:8090/api/product/add-product/${selectedCategory}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+          },
+        }
+      );
+
+      console.log("Response:", response.data);
+      alert("Product is added successfully!");
+
+      // Reset form values to empty
+      setProductName("");
+      setSelectedCategory("");
+      setPrice("");
+      setFileName("");
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Failed to add product. Please try again.");
+    }
+  };
+  const AddProductModal = ({ open, onClose }) => (
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="add-product-modal"
+      aria-describedby="add-product-description"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Box
+        sx={{
+          width: "80%",
+          maxWidth: 600,
+          bgcolor: "background.paper",
+          borderRadius: 2,
+          boxShadow: 24,
+          p: 4,
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <Typography variant="h6" component="h2">
+          Add New Product
+        </Typography>
+        <TextField
+          label="Product Name"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={productName}
+          onChange={(e) => setProductName(e.target.value)}
+        />
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel id="select-label">Select Category</InputLabel>
+
+          <Select
+            labelId="select-label"
+            label="Select Category"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+            {data.map((item) => (
+              <MenuItem key={item.id} value={item.categoryName}>
+                {item.categoryName}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="Price"
+          type="number"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+        <div>
+          <Button
+            component="label"
+            variant="contained"
+            startIcon={<CloudUploadIcon />}
+          >
+            ADD PRODUCT
+            <VisuallyHiddenInput type="file" onChange={handleFileChange} />
+          </Button>
+          {fileName && <p>Selected File: {fileName}</p>}
+        </div>
+        <br /> <br />
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mr: 2 }}
+          onClick={handleAddProduct}
+        >
+          Addd Product
+        </Button>
+        <Button variant="outlined" color="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+      </Box>
+    </Modal>
+  );
 
   return (
     <Grid container spacing={2}>
@@ -164,7 +230,7 @@ export const Nav = () => {
           <Tab
             label="+Add Category"
             sx={{ color: "green" }}
-            onClick={() => setOpenAddCategory(true)}
+            onClick={handleCat}
           />
           <Tab label="Settings" sx={{ color: "green" }} onClick={handleSet} />
           <Tab label="Reports" sx={{ color: "green" }} />
@@ -183,10 +249,6 @@ export const Nav = () => {
       <AddProductModal
         open={openAddProduct}
         onClose={() => setOpenAddProduct(false)}
-      />
-      <AddCategoryModal
-        open={openAddCategory}
-        onClose={() => setOpenAddCategory(false)}
       />
     </Grid>
   );
