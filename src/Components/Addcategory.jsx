@@ -137,7 +137,7 @@ export const Addcategory = () => {
       </div>
       <div style={{ position: "relative", left: "1200px", top: "-90px" }}>
         <Button color="success" variant="contained" onClick={handleOpen}>
-          + Add Category
+          + Addffffffffffff Category
         </Button>
         <Modal
           open={open}
